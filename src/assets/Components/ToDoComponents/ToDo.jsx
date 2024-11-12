@@ -8,20 +8,17 @@ function ToDo() {
         inProcess: [],
         completed: []
     });
+    const [taskToDelete, setTaskToDelete] = useState(null);
 
     useEffect(() => {
         loadTasks();
     }, []);
 
     const loadTasks = () => {
-        const todoTasks = JSON.parse(localStorage.getItem('todoTasks')) || [];
-        const inProcessTasks = JSON.parse(localStorage.getItem('inProcessTasks')) || [];
-        const completedTasks = JSON.parse(localStorage.getItem('completedTasks')) || [];
-
         setTasks({
-            todo: todoTasks,
-            inProcess: inProcessTasks,
-            completed: completedTasks
+            todo: JSON.parse(localStorage.getItem('todoTasks')) || [],
+            inProcess: JSON.parse(localStorage.getItem('inProcessTasks')) || [],
+            completed: JSON.parse(localStorage.getItem('completedTasks')) || []
         });
     };
 
@@ -41,6 +38,12 @@ function ToDo() {
         }
     };
 
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            addTask();
+        }
+    };
+
     const moveTask = (task, from, to) => {
         const updatedFromList = tasks[from].filter(t => t.text !== task.text);
         const updatedToList = [...tasks[to], { ...task, movedAt: new Date().toLocaleString() }];
@@ -56,6 +59,23 @@ function ToDo() {
         localStorage.removeItem('completedTasks');
     };
 
+    const showDeleteModal = (task, status) => {
+        setTaskToDelete({ task, status });
+    };
+
+    const confirmDeleteTask = () => {
+        if (taskToDelete) {
+            const { task, status } = taskToDelete;
+            const updatedTasks = {
+                ...tasks,
+                [status]: tasks[status].filter(t => t.text !== task.text)
+            };
+            setTasks(updatedTasks);
+            saveTasks(updatedTasks);
+            setTaskToDelete(null);
+        }
+    };
+
     return (
         <div className="container">
             <h1>To-Do List</h1>
@@ -65,6 +85,7 @@ function ToDo() {
                     placeholder="Enter a new task..."
                     value={newTask}
                     onChange={(e) => setNewTask(e.target.value)}
+                    onKeyPress={handleKeyPress}
                 />
                 <button onClick={addTask}>Add Task</button>
             </div>
@@ -77,6 +98,7 @@ function ToDo() {
                             <span>{task.text} (Created: {task.createdAt})</span>
                             <button onClick={() => moveTask(task, 'todo', 'inProcess')}>Move to In Process</button>
                             <button onClick={() => moveTask(task, 'todo', 'completed')}>Move to Completed</button>
+                            <button onClick={() => showDeleteModal(task, 'todo')} className="delete-btn">X</button>
                         </li>
                     ))}
                 </ul>
@@ -90,6 +112,7 @@ function ToDo() {
                             <span>{task.text} (Moved to In Process: {task.movedAt})</span>
                             <button onClick={() => moveTask(task, 'inProcess', 'todo')}>Move to To Do</button>
                             <button onClick={() => moveTask(task, 'inProcess', 'completed')}>Move to Completed</button>
+                            <button onClick={() => showDeleteModal(task, 'inProcess')} className="delete-btn">X</button>
                         </li>
                     ))}
                 </ul>
@@ -103,12 +126,25 @@ function ToDo() {
                             <span>{task.text} (Completed: {task.movedAt})</span>
                             <button onClick={() => moveTask(task, 'completed', 'todo')}>Move to To Do</button>
                             <button onClick={() => moveTask(task, 'completed', 'inProcess')}>Move to In Process</button>
+                            <button onClick={() => showDeleteModal(task, 'completed')} className="delete-btn">X</button>
                         </li>
                     ))}
                 </ul>
             </div>
 
             <button id="clear-completed" onClick={clearCompletedTasks}>Clear Completed Tasks</button>
+
+            {taskToDelete && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h3>Are you sure you want to delete this task?</h3>
+                        <div className="modal-buttons">
+                            <button onClick={confirmDeleteTask}>Yes</button>
+                            <button onClick={() => setTaskToDelete(null)}>No</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
